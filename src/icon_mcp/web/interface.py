@@ -426,7 +426,7 @@ async function copyAddPng(icon, btnEl) {{
         if (!resp.ok || !data.base64) {{
             throw new Error(data.error || 'no base64');
         }}
-        await copyToClipboard(data.base64);
+        await copyToClipboard(formatAddPng(data.base64));
         showMessage('{copied_text}', 'success');
         btnEl.textContent = '\\u2713';
         setTimeout(function() {{ btnEl.textContent = original; btnEl.disabled = false; }}, 1200);
@@ -434,6 +434,15 @@ async function copyAddPng(icon, btnEl) {{
         showMessage('{copy_failed}: ' + e.message, 'error');
         btnEl.disabled = false;
     }}
+}}
+
+// 把单行 Base64 格式化为 Delphi 字符串拼接片段：每行 64 字符、8 空格缩进、单引号包裹、行尾带 +
+function formatAddPng(b64) {{
+    const lines = [];
+    for (let i = 0; i < b64.length; i += 64) {{
+        lines.push("        '" + b64.slice(i, i + 64) + "'+");
+    }}
+    return lines.join('\\n');
 }}
 
 async function copyToClipboard(text) {{
