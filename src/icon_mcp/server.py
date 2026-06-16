@@ -350,11 +350,16 @@ class MCPIconServer:
         print(t("server.started"), file=sys.stderr)
 
         # Register signal handlers on the running event loop.
+        # add_signal_handler is not implemented on Windows (ProactorEventLoop),
+        # so skip registration there and rely on KeyboardInterrupt handling.
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(
-                sig, lambda: asyncio.ensure_future(self._shutdown_and_exit())
-            )
+            try:
+                loop.add_signal_handler(
+                    sig, lambda: asyncio.ensure_future(self._shutdown_and_exit())
+                )
+            except NotImplementedError:
+                pass
 
         try:
             async with stdio_server() as (read_stream, write_stream):
