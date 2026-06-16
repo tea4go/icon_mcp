@@ -160,7 +160,7 @@ class MCPIconServer:
                 ),
                 Tool(
                     name="save_icons",
-                    description="Save selected icons to local filesystem as SVG files",
+                    description="Save selected icons to local filesystem as svg/png/bmp/ico files",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -173,6 +173,17 @@ class MCPIconServer:
                                 "type": "string",
                                 "description": "Path to save icons (default: ./saved-icons)",
                                 "default": "./saved-icons",
+                            },
+                            "format": {
+                                "type": "string",
+                                "description": "Icon file format (default: svg). Raster formats rasterize the SVG.",
+                                "enum": ["svg", "png", "bmp", "ico"],
+                                "default": "svg",
+                            },
+                            "size": {
+                                "type": "integer",
+                                "description": "Pixel size for raster formats png/bmp/ico (default: 128)",
+                                "default": 128,
                             },
                         },
                         "required": ["icons"],
@@ -246,6 +257,8 @@ class MCPIconServer:
             return await self.saver.save_icons(
                 icons=args.get("icons", []),
                 save_path=args.get("savePath", "./saved-icons"),
+                fmt=args.get("format", "svg"),
+                size=args.get("size", 128),
             )
 
         else:

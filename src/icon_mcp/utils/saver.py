@@ -19,12 +19,30 @@ class IconSaver:
     def __init__(self, cache: CacheManager):
         self.cache = cache
 
+    SUPPORTED_FORMATS = ("svg", "png", "bmp", "ico")
+
     async def save_icons(
-        self, icons: list[dict[str, Any]], save_path: str = "./saved-icons"
+        self,
+        icons: list[dict[str, Any]],
+        save_path: str = "./saved-icons",
+        fmt: str = "svg",
+        size: int = 128,
     ) -> dict[str, Any]:
-        """Save icon SVG data to local files."""
+        """Save icon data to local files in the requested format.
+
+        ``fmt`` is one of svg/png/bmp/ico. ``svg`` writes the raw vector
+        markup; the raster formats rasterize the SVG to a ``size`` x ``size``
+        image.
+        """
         if not icons:
             raise ValueError("No icons to save")
+
+        fmt = (fmt or "svg").lower()
+        if fmt not in self.SUPPORTED_FORMATS:
+            raise ValueError(
+                f"Unsupported format '{fmt}'. "
+                f"Supported: {', '.join(self.SUPPORTED_FORMATS)}"
+            )
 
         full_path = os.path.abspath(save_path)
         os.makedirs(full_path, exist_ok=True)
@@ -39,11 +57,14 @@ class IconSaver:
                 failed.append(name)
                 continue
 
-            file_name = f"{name}.svg"
+            file_name = f"{name}.{fmt}"
             file_path = os.path.join(full_path, file_name)
             try:
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(svg_content)
+                if fmt == "svg":
+                    with open(file_path, "w", encoding="utf-8") as f:
+                        f.write(svg_content)
+                else:
+                    self._save_raster(svg_content, file_path, fmt, size)
                 saved.append(file_name)
                 print(t("download.saved", {"fileName": file_name}), file=sys.stderr)
             except Exception as e:
@@ -61,6 +82,35 @@ class IconSaver:
                 "download.saveCompleted", {"count": len(saved), "path": full_path}
             ),
         }
+
+    @staticmethod
+    def _save_raster(svg_content: str, file_path: str, fmt: str, size: int) -> None:
+        """Rasterize SVG markup and write it as png/bmp/ico."""
+        # Heavy deps imported lazily so svg-only usage stays light.
+        import io
+
+        from PIL import Image
+        from reportlab.graphics import renderPM
+        from svglib.svglib import svg2rlg
+
+        drawing = svg2rlg(io.StringIO(svg_content))
+        if drawing is None:
+            raise ValueError("Failed to parse SVG content")
+
+        img = renderPM.drawToPIL(drawing)
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
+        img = img.resize((size, size), Image.LANCZOS)
+
+        if fmt == "png":
+            img.save(file_path, "PNG")
+        elif fmt == "ico":
+            img.save(file_path, "ICO", sizes=[(size, size)])
+        elif fmt == "bmp":
+            # BMP has no alpha channel; composite onto a white background.
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[3])
+            background.save(file_path, "BMP")
 
     def send_to_mcp_client(
         self, icons: list[dict[str, Any]], search_id: str
