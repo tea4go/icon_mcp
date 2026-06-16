@@ -74,6 +74,7 @@ class WebServer:
         self._app.router.add_get("/api/cache", self._handle_cache_api)
         self._app.router.add_post("/api/search", self._handle_search_api)
         self._app.router.add_post("/api/save", self._handle_save_api)
+        self._app.router.add_post("/api/png", self._handle_png_api)
         self._app.router.add_get("/ws", self._handle_websocket)
         self._app.router.add_route("OPTIONS", "/{path:.*}", self._handle_cors)
 
@@ -212,6 +213,69 @@ class WebServer:
             {"success": True, "count": len(icons)},
             headers={"Access-Control-Allow-Origin": "*"},
         )
+
+    async def _handle_png_api(self, request: web.Request) -> web.Response:
+        """Rasterize an icon's SVG to a PNG and return a single-line Base64 string.
+
+        The Base64 has no ``data:`` prefix and no line breaks, so it can be
+        pasted straight into a Delphi ``AddPng(const AB64: string)`` constant.
+        Default size is 32x32 (RGBA) to match the host program's 32px,
+        cd32Bit ImageList.
+        """
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response(
+                {"error": "Invalid JSON"},
+                status=400,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+
+        svg = body.get("svg", "")
+        size = int(body.get("size", 32))
+        if not svg:
+            return web.json_response(
+                {"error": "Missing svg"},
+                status=400,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+
+        try:
+            b64 = await asyncio.to_thread(self._svg_to_png_base64, svg, size)
+        except Exception as e:
+            return web.json_response(
+                {"error": f"Rasterize failed: {e}"},
+                status=500,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+
+        return web.json_response(
+            {"base64": b64, "size": size},
+            headers={"Access-Control-Allow-Origin": "*"},
+        )
+
+    @staticmethod
+    def _svg_to_png_base64(svg_content: str, size: int = 32) -> str:
+        """Rasterize SVG markup to a size x size RGBA PNG, return single-line Base64."""
+        import base64
+        import io
+
+        from PIL import Image
+        from reportlab.graphics import renderPM
+        from svglib.svglib import svg2rlg
+
+        drawing = svg2rlg(io.StringIO(svg_content))
+        if drawing is None:
+            raise ValueError("Failed to parse SVG content")
+
+        img = renderPM.drawToPIL(drawing)
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
+        img = img.resize((size, size), Image.LANCZOS)
+
+        buf = io.BytesIO()
+        img.save(buf, "PNG")
+        return base64.b64encode(buf.getvalue()).decode("ascii")
 
     async def _handle_websocket(self, request: web.Request) -> web.WebSocketResponse:
         """Handle WebSocket connections for real-time communication."""

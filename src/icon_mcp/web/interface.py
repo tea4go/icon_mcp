@@ -127,6 +127,22 @@ class WebInterface:
         .icon-card .btn.selected-btn {{
             background: #4caf50;
         }}
+        .card-actions {{
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 10px;
+        }}
+        .card-actions .btn {{ margin-top: 0; padding: 6px 14px; }}
+        .icon-card .btn.copy-btn {{
+            background: #f0f0f5;
+            color: #555;
+        }}
+        .icon-card .btn.copy-btn:hover {{ background: #e2e2ee; }}
+        .icon-card .btn.copy-btn:disabled {{
+            opacity: 0.4;
+            cursor: not-allowed;
+        }}
         .sidebar-box {{
             background: white;
             border-radius: 12px;
@@ -281,6 +297,9 @@ class WebInterface:
         no_selected = t("web.noIconsSelected")
         select_btn = t("web.selectButton")
         selected_btn = t("web.selectedButton")
+        copy_btn = t("web.copyButton")
+        copied_text = t("web.copied")
+        copy_failed = t("web.copyFailed")
         error_text = t("web.error")
         send_text = t("web.sendSelected")
 
@@ -370,13 +389,67 @@ function displayIcons(icons) {{
         }}
 
         const isSelected = selectedIcons.has(icon.id);
+        const hasSvg = !!icon.show_svg;
         card.innerHTML =
             '<div class="icon-preview">' + preview + '</div>' +
             '<div class="icon-name">' + (icon.name || 'icon-' + icon.id) + '</div>' +
+            '<div class="card-actions">' +
             '<button class="btn ' + (isSelected ? 'selected-btn' : '') + '">' +
-            (isSelected ? '{selected_btn}' : '{select_btn}') + '</button>';
+            (isSelected ? '{selected_btn}' : '{select_btn}') + '</button>' +
+            '<button class="btn copy-btn" data-id="' + icon.id + '"' +
+            (hasSvg ? '' : ' disabled') + '>{copy_btn}</button>' +
+            '</div>';
+        // 复制按钮：阻止冒泡（避免触发卡片选择），复制 AddPng 可用的 PNG Base64
+        const copyEl = card.querySelector('.copy-btn');
+        if (copyEl) {{
+            copyEl.onclick = function(e) {{
+                e.stopPropagation();
+                copyAddPng(icon, copyEl);
+            }};
+        }}
         grid.appendChild(card);
     }});
+}}
+
+async function copyAddPng(icon, btnEl) {{
+    const svg = icon.show_svg;
+    if (!svg) return;
+    const original = btnEl.textContent;
+    btnEl.disabled = true;
+    try {{
+        const resp = await fetch('/api/png', {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify({{ svg: svg, size: 32 }})
+        }});
+        const data = await resp.json();
+        if (!resp.ok || !data.base64) {{
+            throw new Error(data.error || 'no base64');
+        }}
+        await copyToClipboard(data.base64);
+        showMessage('{copied_text}', 'success');
+        btnEl.textContent = '\\u2713';
+        setTimeout(function() {{ btnEl.textContent = original; btnEl.disabled = false; }}, 1200);
+    }} catch(e) {{
+        showMessage('{copy_failed}: ' + e.message, 'error');
+        btnEl.disabled = false;
+    }}
+}}
+
+async function copyToClipboard(text) {{
+    // 优先用现代剪贴板 API（localhost 下可用），否则回退 execCommand
+    if (navigator.clipboard && window.isSecureContext) {{
+        await navigator.clipboard.writeText(text);
+        return;
+    }}
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {{ document.execCommand('copy'); }} finally {{ document.body.removeChild(ta); }}
 }}
 
 function toggleSelection(icon) {{
