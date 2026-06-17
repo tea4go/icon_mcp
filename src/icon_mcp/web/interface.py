@@ -143,6 +143,43 @@ class WebInterface:
             opacity: 0.4;
             cursor: not-allowed;
         }}
+        .save-dropdown {{ position: relative; display: inline-block; }}
+        .icon-card .btn.save-btn {{
+            background: #f0f0f5;
+            color: #555;
+        }}
+        .icon-card .btn.save-btn:hover {{ background: #e2e2ee; }}
+        .icon-card .btn.save-btn:disabled {{
+            opacity: 0.4;
+            cursor: not-allowed;
+        }}
+        .save-menu {{
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 4px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            z-index: 10;
+            overflow: hidden;
+            min-width: 110px;
+        }}
+        .save-dropdown.open .save-menu {{ display: block; }}
+        .save-menu button {{
+            display: block;
+            width: 100%;
+            padding: 8px 14px;
+            border: none;
+            background: white;
+            color: #555;
+            font-size: 13px;
+            text-align: left;
+            cursor: pointer;
+        }}
+        .save-menu button:hover {{ background: #f0f0f5; }}
         .sidebar-box {{
             background: white;
             border-radius: 12px;
@@ -300,6 +337,8 @@ class WebInterface:
         copy_btn = t("web.copyButton")
         copied_text = t("web.copied")
         copy_failed = t("web.copyFailed")
+        save_btn = t("web.saveButton")
+        save_failed = t("web.saveFailed")
         error_text = t("web.error")
         send_text = t("web.sendSelected")
 
@@ -398,6 +437,14 @@ function displayIcons(icons) {{
             (isSelected ? '{selected_btn}' : '{select_btn}') + '</button>' +
             '<button class="btn copy-btn" data-id="' + icon.id + '"' +
             (hasSvg ? '' : ' disabled') + '>{copy_btn}</button>' +
+            '<div class="save-dropdown">' +
+            '<button class="btn save-btn"' + (hasSvg ? '' : ' disabled') +
+            '>{save_btn} \\u25BE</button>' +
+            '<div class="save-menu">' +
+            '<button data-fmt="png">{save_btn} PNG</button>' +
+            '<button data-fmt="bmp">{save_btn} BMP</button>' +
+            '<button data-fmt="ico">{save_btn} ICO</button>' +
+            '</div></div>' +
             '</div>';
         // 复制按钮：阻止冒泡（避免触发卡片选择），复制 AddPng 可用的 PNG Base64
         const copyEl = card.querySelector('.copy-btn');
@@ -406,6 +453,23 @@ function displayIcons(icons) {{
                 e.stopPropagation();
                 copyAddPng(icon, copyEl);
             }};
+        }}
+        // 保存下拉：点击主按钮切换菜单，点击子项下载对应格式图片
+        const dropdown = card.querySelector('.save-dropdown');
+        if (dropdown && hasSvg) {{
+            const saveBtn = dropdown.querySelector('.save-btn');
+            saveBtn.onclick = function(e) {{
+                e.stopPropagation();
+                closeAllSaveMenus(dropdown);
+                dropdown.classList.toggle('open');
+            }};
+            dropdown.querySelectorAll('.save-menu button').forEach(function(item) {{
+                item.onclick = function(e) {{
+                    e.stopPropagation();
+                    dropdown.classList.remove('open');
+                    saveIcon(icon, item.getAttribute('data-fmt'));
+                }};
+            }});
         }}
         grid.appendChild(card);
     }});
@@ -443,6 +507,45 @@ function formatAddPng(b64) {{
         lines.push("        '" + b64.slice(i, i + 64) + "'+");
     }}
     return lines.join('\\n');
+}}
+
+// 关闭除 except 外的所有已打开保存菜单
+function closeAllSaveMenus(except) {{
+    document.querySelectorAll('.save-dropdown.open').forEach(function(d) {{
+        if (d !== except) d.classList.remove('open');
+    }});
+}}
+
+// 点击页面任意其他位置关闭已打开的保存菜单
+document.addEventListener('click', function() {{ closeAllSaveMenus(null); }});
+
+// 请求后端把 SVG 栅格化为指定格式并触发浏览器下载
+async function saveIcon(icon, fmt) {{
+    const svg = icon.show_svg;
+    if (!svg) return;
+    try {{
+        const resp = await fetch('/api/raster', {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify({{ svg: svg, format: fmt, size: 128 }})
+        }});
+        if (!resp.ok) {{
+            let msg = 'rasterize failed';
+            try {{ msg = (await resp.json()).error || msg; }} catch(_) {{}}
+            throw new Error(msg);
+        }}
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (icon.name || 'icon-' + icon.id) + '.' + fmt;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function() {{ URL.revokeObjectURL(url); }}, 1000);
+    }} catch(e) {{
+        showMessage('{save_failed}: ' + e.message, 'error');
+    }}
 }}
 
 async function copyToClipboard(text) {{

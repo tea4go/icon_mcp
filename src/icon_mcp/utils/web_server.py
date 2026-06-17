@@ -75,6 +75,7 @@ class WebServer:
         self._app.router.add_post("/api/search", self._handle_search_api)
         self._app.router.add_post("/api/save", self._handle_save_api)
         self._app.router.add_post("/api/png", self._handle_png_api)
+        self._app.router.add_post("/api/raster", self._handle_raster_api)
         self._app.router.add_get("/ws", self._handle_websocket)
         self._app.router.add_route("OPTIONS", "/{path:.*}", self._handle_cors)
 
@@ -276,6 +277,87 @@ class WebServer:
         buf = io.BytesIO()
         img.save(buf, "PNG")
         return base64.b64encode(buf.getvalue()).decode("ascii")
+
+    async def _handle_raster_api(self, request: web.Request) -> web.Response:
+        """Rasterize an icon's SVG to png/bmp/ico bytes and return them as a download.
+
+        Used by the web UI "保存" dropdown to download the rendered icon as an
+        image file. Default size 128x128.
+        """
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response(
+                {"error": "Invalid JSON"},
+                status=400,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+
+        svg = body.get("svg", "")
+        fmt = str(body.get("format", "png")).lower()
+        size = int(body.get("size", 128))
+        if not svg:
+            return web.json_response(
+                {"error": "Missing svg"},
+                status=400,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+        if fmt not in ("png", "bmp", "ico"):
+            return web.json_response(
+                {"error": f"Unsupported format: {fmt}"},
+                status=400,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+
+        try:
+            data = await asyncio.to_thread(self._svg_to_raster_bytes, svg, fmt, size)
+        except Exception as e:
+            return web.json_response(
+                {"error": f"Rasterize failed: {e}"},
+                status=500,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+
+        content_type = {
+            "png": "image/png",
+            "bmp": "image/bmp",
+            "ico": "image/x-icon",
+        }[fmt]
+        return web.Response(
+            body=data,
+            content_type=content_type,
+            headers={"Access-Control-Allow-Origin": "*"},
+        )
+
+    @staticmethod
+    def _svg_to_raster_bytes(svg_content: str, fmt: str, size: int = 128) -> bytes:
+        """Rasterize SVG markup to png/bmp/ico bytes."""
+        import io
+
+        from PIL import Image
+        from reportlab.graphics import renderPM
+        from svglib.svglib import svg2rlg
+
+        drawing = svg2rlg(io.StringIO(svg_content))
+        if drawing is None:
+            raise ValueError("Failed to parse SVG content")
+
+        img = renderPM.drawToPIL(drawing)
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
+        img = img.resize((size, size), Image.LANCZOS)
+
+        buf = io.BytesIO()
+        if fmt == "png":
+            img.save(buf, "PNG")
+        elif fmt == "ico":
+            img.save(buf, "ICO", sizes=[(size, size)])
+        elif fmt == "bmp":
+            # BMP has no alpha channel; composite onto a white background.
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[3])
+            background.save(buf, "BMP")
+        return buf.getvalue()
 
     async def _handle_websocket(self, request: web.Request) -> web.WebSocketResponse:
         """Handle WebSocket connections for real-time communication."""

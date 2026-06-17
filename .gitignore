@@ -8,6 +8,7 @@ __pycache__/
 dist/
 build/
 *.whl
+*.txt
 
 # Virtual environments
 .venv/
@@ -30,3 +31,12 @@ Thumbs.db
 
 # Project
 saved-icons/
+_mcpverify/verify_home.png
+_repro_out/current_color.bmp
+_repro_out/current_color.ico
+_repro_out/current_color.png
+_repro_out/current_color.svg
+_repro_out/with_fill.bmp
+_repro_out/with_fill.ico
+_repro_out/with_fill.png
+_repro_out/with_fill.svg

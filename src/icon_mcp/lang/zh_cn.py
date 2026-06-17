@@ -55,6 +55,8 @@ TRANSLATIONS = {
         "copyButton": "复制",
         "copied": "已复制 PNG Base64 到剪贴板",
         "copyFailed": "复制失败",
+        "saveButton": "保存",
+        "saveFailed": "保存失败",
         "sendSelected": "发送选中图标到 MCP 客户端",
         "noIconsSelected": "未选择图标",
         "selectedCount": "已选择 {count} 个图标",

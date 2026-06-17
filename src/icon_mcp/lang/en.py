@@ -55,6 +55,8 @@ TRANSLATIONS = {
         "copyButton": "Copy",
         "copied": "PNG Base64 copied to clipboard",
         "copyFailed": "Copy failed",
+        "saveButton": "Save",
+        "saveFailed": "Save failed",
         "sendSelected": "Send selected icons to MCP client",
         "noIconsSelected": "No icons selected",
         "selectedCount": "{count} icons selected",
