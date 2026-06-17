@@ -60,11 +60,11 @@ class WebInterface:
             outline: none;
         }}
         .main {{
-            max-width: 1200px;
+            width: 90%;
             margin: 0 auto;
-            padding: 24px;
+            padding: 16px 0;
             display: flex;
-            gap: 24px;
+            gap: 20px;
         }}
         .icon-area {{ flex: 1; }}
         .sidebar {{
@@ -73,13 +73,13 @@ class WebInterface:
         }}
         .icon-grid {{
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
         }}
         .icon-card {{
             background: white;
-            border-radius: 12px;
-            padding: 20px 16px;
+            border-radius: 8px;
+            padding: 5px;
             text-align: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
             transition: transform 0.2s, box-shadow 0.2s;
@@ -94,30 +94,30 @@ class WebInterface:
             background: #f0f0ff;
         }}
         .icon-preview {{
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 12px;
+            width: 48px;
+            height: 48px;
+            margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: center;
         }}
         .icon-preview img, .icon-preview svg {{
-            max-width: 100%;
-            max-height: 100%;
+            width: 2em;
+            height: 2em;
         }}
         .icon-name {{
-            font-size: 13px;
+            font-size: 11px;
             color: #555;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }}
         .icon-card .btn {{
-            margin-top: 10px;
-            padding: 6px 16px;
+            margin-top: 4px;
+            padding: 4px 8px;
             border: none;
-            border-radius: 6px;
-            font-size: 13px;
+            border-radius: 4px;
+            font-size: 12px;
             cursor: pointer;
             background: #667eea;
             color: white;
@@ -129,11 +129,20 @@ class WebInterface:
         }}
         .card-actions {{
             display: flex;
-            gap: 8px;
-            justify-content: center;
-            margin-top: 10px;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 4px;
         }}
-        .card-actions .btn {{ margin-top: 0; padding: 6px 14px; }}
+        .card-actions-row {{
+            display: flex;
+            gap: 4px;
+            width: 100%;
+        }}
+        .card-actions-row .btn {{ margin-top: 0; padding: 4px 0; font-size: 12px; min-width: 0; }}
+        .card-actions-row .btn.select-btn {{ flex: 1; }}
+        .card-actions-row .btn.copy-btn {{ flex: 1; }}
+        .card-actions-row .save-dropdown {{ flex: 1; position: relative; }}
+        .card-actions-row .save-dropdown .btn.save-btn {{ width: 100%; }}
         .icon-card .btn.copy-btn {{
             background: #f0f0f5;
             color: #555;
@@ -352,9 +361,20 @@ let currentPage = 1;
 let totalPages = 1;
 let pageSize = 15;
 
+// 根据视口高度动态计算每页图标数，让内容撑满一屏
+function calcPageSize() {{
+    const gridTop = document.querySelector('.icon-area').getBoundingClientRect().top;
+    const availableH = window.innerHeight - gridTop - 60; // 预留分页栏空间
+    const cardH = 110; // 每个 icon-card 大致高度
+    const cols = Math.max(1, Math.floor(document.getElementById('iconGrid').clientWidth / 108)); // 每行列数
+    const rows = Math.max(1, Math.floor(availableH / cardH));
+    return Math.max(cols * rows, 20);
+}}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {{
     if (SEARCH_ID) {{
+        pageSize = calcPageSize();
         connectWebSocket();
         loadCachedResults(1);
     }}
@@ -433,18 +453,22 @@ function displayIcons(icons) {{
             '<div class="icon-preview">' + preview + '</div>' +
             '<div class="icon-name">' + (icon.name || 'icon-' + icon.id) + '</div>' +
             '<div class="card-actions">' +
-            '<button class="btn ' + (isSelected ? 'selected-btn' : '') + '">' +
+            '<div class="card-actions-row">' +
+            '<button class="btn select-btn ' + (isSelected ? 'selected-btn' : '') + '">' +
             (isSelected ? '{selected_btn}' : '{select_btn}') + '</button>' +
             '<button class="btn copy-btn" data-id="' + icon.id + '"' +
             (hasSvg ? '' : ' disabled') + '>{copy_btn}</button>' +
+            '</div>' +
+            '<div class="card-actions-row">' +
             '<div class="save-dropdown">' +
             '<button class="btn save-btn"' + (hasSvg ? '' : ' disabled') +
             '>{save_btn} \\u25BE</button>' +
             '<div class="save-menu">' +
-            '<button data-fmt="png">{save_btn} PNG</button>' +
-            '<button data-fmt="bmp">{save_btn} BMP</button>' +
-            '<button data-fmt="ico">{save_btn} ICO</button>' +
+            '<button data-fmt="png">PNG</button>' +
+            '<button data-fmt="bmp">BMP</button>' +
+            '<button data-fmt="ico">ICO</button>' +
             '</div></div>' +
+            '</div>' +
             '</div>';
         // 复制按钮：阻止冒泡（避免触发卡片选择），复制 AddPng 可用的 PNG Base64
         const copyEl = card.querySelector('.copy-btn');
@@ -648,6 +672,15 @@ function goToPage(page) {{
     currentPage = page;
     loadCachedResults(page);
 }}
+
+// 窗口大小变化时重新计算并刷新
+window.addEventListener('resize', function() {{
+    const newSize = calcPageSize();
+    if (newSize !== pageSize) {{
+        pageSize = newSize;
+        loadCachedResults(1);
+    }}
+}});
 
 async function sendSelectedIcons() {{
     if (selectedIcons.size === 0) return;
