@@ -1,14 +1,16 @@
-"""MCP Icon Server entry point.
+"""MCP Icon Server 入口。
 
-Usage:
+用法:
     uv run python run.py
     uv run python run.py --port 8080 --language zh-CN
+    uv run python run.py --test macos --language zh-CN
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import os
 import sys
 
@@ -22,13 +24,13 @@ from icon_mcp.server import MCPIconServer
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="MCP Icon Server - Search and fetch icons from iconfont.cn"
+        description="MCP 图标服务器 - 从 iconfont.cn 搜索和获取图标"
     )
     parser.add_argument(
         "--port",
         type=int,
         default=None,
-        help="Web server port (default: 3000, overrides WEB_SERVER_PORT env)",
+        help="Web server port (default: 31245, overrides WEB_SERVER_PORT env)",
     )
     parser.add_argument(
         "--auto-open",
@@ -46,7 +48,13 @@ def main() -> None:
         "--language",
         choices=["en", "zh-CN"],
         default=None,
-        help="UI language (default: en, overrides LANGUAGE env)",
+        help="界面语言 (默认: en，覆盖 LANGUAGE 环境变量",
+    )
+    parser.add_argument(
+        "--test",
+        type=str,
+        default=None,
+        help="测试模式：直接搜索指定关键词并输出结果，然后退出",
     )
 
     args = parser.parse_args()
@@ -63,14 +71,25 @@ def main() -> None:
         config.language = args.language
         os.environ["LANGUAGE"] = args.language
 
-    # Create and run server
+    # 创建服务器
     server = MCPIconServer(config)
+
+    # 测试模式：直接搜索并输出结果
+    if args.test is not None:
+        try:
+            result = asyncio.run(server.test_search(args.test))
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"测试失败: {e}", file=sys.stderr)
+            sys.exit(1)
+        return
+
     try:
         asyncio.run(server.run())
     except (KeyboardInterrupt, SystemExit):
         pass
     except Exception as e:
-        print(f"Fatal error: {e}", file=sys.stderr)
+        print(f"致命错误: {e}", file=sys.stderr)
         sys.exit(1)
 
 

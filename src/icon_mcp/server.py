@@ -1,4 +1,4 @@
-"""MCP Server core - registers tools and handles MCP protocol."""
+"""MCP 服务器核心 - 注册工具并处理 MCP 协议。"""
 
 from __future__ import annotations
 
@@ -29,15 +29,15 @@ from .web.interface import WebInterface
 
 
 class MCPIconServer:
-    """Main MCP Icon Server - orchestrates all components."""
+    """MCP 图标服务器主类 - 协调所有组件。"""
 
     def __init__(self, config: ServerConfig | None = None):
         self.config = config or ServerConfig()
 
-        # Initialize language
+        # 初始化语言
         init_from_env()
 
-        # Initialize components
+        # 初始化组件
         self.cache = CacheManager(expiry_seconds=self.config.cache_expiry_seconds)
         self.searcher = IconSearcher(self.config, self.cache)
         self.saver = IconSaver(self.cache)
@@ -49,12 +49,12 @@ class MCPIconServer:
         self.web_interface = WebInterface(port=self.config.web_server_port)
         self.web_server.set_html_generator(self.web_interface)
 
-        # MCP server instance
+        # MCP 服务器实例
         self.mcp = Server("icon-mcp-server")
         self._register_handlers()
 
     def _register_handlers(self) -> None:
-        """Register all MCP tool handlers."""
+        """注册所有 MCP 工具处理器。"""
 
         @self.mcp.list_tools()
         async def list_tools() -> list[Tool]:
@@ -67,22 +67,22 @@ class MCPIconServer:
                         "properties": {
                             "q": {
                                 "type": "string",
-                                "description": "Search keyword for icons",
+                                "description": "图标搜索关键词",
                             },
                             "sortType": {
                                 "type": "string",
-                                "description": "Sort type: recommend (default), updated_at",
+                                "description": "排序方式：recommend（默认）、updated_at",
                                 "default": "recommend",
                             },
                             "page": {
                                 "type": "integer",
-                                "description": "Page number (default: 1)",
+                                "description": "页码（默认：1）",
                                 "default": 1,
                                 "minimum": 1,
                             },
                             "pageSize": {
                                 "type": "integer",
-                                "description": "Number of results per page (1-100, default: 100)",
+                                "description": "每页结果数（1-100，默认：100）",
                                 "default": 100,
                                 "minimum": 1,
                                 "maximum": 100,
@@ -99,11 +99,11 @@ class MCPIconServer:
                         "properties": {
                             "port": {
                                 "type": "integer",
-                                "description": "Server port (default: 3000)",
+                                "description": "服务器端口（默认：3000）",
                             },
                             "autoOpen": {
                                 "type": "boolean",
-                                "description": "Auto-open browser (default: true)",
+                                "description": "自动打开浏览器（默认：true）",
                                 "default": True,
                             },
                         },
@@ -125,11 +125,11 @@ class MCPIconServer:
                         "properties": {
                             "searchId": {
                                 "type": "string",
-                                "description": "Search ID to check selection for",
+                                "description": "要检查选择状态的搜索 ID",
                             },
                             "maxWaitTime": {
                                 "type": "integer",
-                                "description": "Max wait time in ms (default: 180000)",
+                                "description": "最大等待时间（毫秒，默认：180000）",
                                 "default": 180000,
                             },
                         },
@@ -152,7 +152,7 @@ class MCPIconServer:
                         "properties": {
                             "expiredOnly": {
                                 "type": "boolean",
-                                "description": "Only clear expired entries (default: false)",
+                                "description": "仅清除过期条目（默认：false）",
                                 "default": False,
                             },
                         },
@@ -160,29 +160,29 @@ class MCPIconServer:
                 ),
                 Tool(
                     name="save_icons",
-                    description="Save selected icons to local filesystem as svg/png/bmp/ico files",
+                    description="将选中的图标保存为 svg/png/bmp/ico 文件到本地",
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "icons": {
                                 "type": "array",
-                                "description": "Array of icon objects to save",
+                                "description": "要保存的图标对象数组",
                                 "items": {"type": "object"},
                             },
                             "savePath": {
                                 "type": "string",
-                                "description": "Path to save icons (default: ./saved-icons)",
+                                "description": "图标保存路径（默认：./saved-icons）",
                                 "default": "./saved-icons",
                             },
                             "format": {
                                 "type": "string",
-                                "description": "Icon file format (default: svg). Raster formats rasterize the SVG.",
+                                "description": "图标文件格式（默认：svg）。栅格格式会将 SVG 转为像素图。",
                                 "enum": ["svg", "png", "bmp", "ico"],
                                 "default": "svg",
                             },
                             "size": {
                                 "type": "integer",
-                                "description": "Pixel size for raster formats png/bmp/ico (default: 128)",
+                                "description": "栅格格式 png/bmp/ico 的像素尺寸（默认：128）",
                                 "default": 128,
                             },
                         },
@@ -205,7 +205,7 @@ class MCPIconServer:
                 ]
 
     async def _dispatch_tool(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
-        """Dispatch a tool call to the appropriate handler."""
+        """将工具调用分发给对应的处理器。"""
         if name == "search_icons":
             result = await self.searcher.search_icons(
                 q=args.get("q", ""),
@@ -213,13 +213,13 @@ class MCPIconServer:
                 page=args.get("page", 1),
                 page_size=args.get("pageSize", 100),
             )
-            # Auto-start web server if not running
+            # 自动启动 Web 服务器（若未运行）
             if not self.web_server.is_running():
                 await self.web_server.start(auto_open=False)
                 self.web_interface.port = self.web_server.port
-                print(f"  Web server auto-started: {self.web_server.get_url()}", file=sys.stderr)
+                print(f"  Web 服务器已自动启动: {self.web_server.get_url()}", file=sys.stderr)
 
-            # Add web URL to result
+            # 在结果中添加 Web URL
             search_id = result["search_id"]
             result["web_url"] = f"{self.web_server.get_url()}?searchId={search_id}"
             result["waiting_message"] = t("search.pleaseWaitForSelection")
@@ -267,8 +267,8 @@ class MCPIconServer:
     async def _check_selection(
         self, search_id: str, max_wait_ms: int = 180000
     ) -> dict[str, Any]:
-        """Poll for user selection status with timeout."""
-        # Validate search_id exists
+        """轮询用户选择状态，超时则返回。"""
+        # 验证 search_id 是否存在
         cached = self.cache.get_search(search_id)
         if cached is None:
             raise ValueError(t("selection.noSearchFound", {"searchId": search_id}))
@@ -280,7 +280,7 @@ class MCPIconServer:
 
         max_wait_s = max_wait_ms / 1000.0
         start = time.time()
-        check_interval = 0.1  # 100ms polling
+        check_interval = 0.1  # 100ms 轮询间隔
         log_interval = 10.0
         last_log = start
 
@@ -289,7 +289,7 @@ class MCPIconServer:
 
             if selection is not None:
                 if selection.status == SelectionStatus.COMPLETED:
-                    # Clean up and return icons
+                    # 清理并返回图标
                     icons = selection.selected_icons
                     self.cache.delete_selection(search_id)
                     return {
@@ -306,7 +306,7 @@ class MCPIconServer:
                         "message": t("selection.selectionFailed"),
                     }
 
-            # Periodic status log
+            # 定期状态日志
             now = time.time()
             if now - last_log >= log_interval:
                 elapsed = int(now - start)
@@ -318,7 +318,7 @@ class MCPIconServer:
 
             await asyncio.sleep(check_interval)
 
-        # Timeout
+        # 超时
         elapsed = int(time.time() - start)
         return {
             "success": False,
@@ -326,32 +326,58 @@ class MCPIconServer:
             "message": t("selection.selectionTimeout", {"seconds": elapsed}),
         }
 
+    async def test_search(self, query: str, page_size: int = 20) -> dict[str, Any]:
+        """直接搜索图标并输出结果，用于 --test 参数快速验证。"""
+        print(t("server.starting"), file=sys.stderr)
+        print(f"  测试搜索关键词: {query}", file=sys.stderr)
+        print(f"  每页结果数     : {page_size}", file=sys.stderr)
+
+        try:
+            result = await self.searcher.search_icons(q=query, page_size=page_size)
+            # 输出搜索结果摘要
+            icons = result.get("icons", [])
+            total = result.get("total_count", 0)
+            print(f"\n  搜索 '{query}' 完成: 本页 {len(icons)} 个图标，总计 {total} 个", file=sys.stderr)
+            for i, icon in enumerate(icons, 1):
+                name = icon.get("name", "未知")
+                id_ = icon.get("id", "")
+                show_svg = icon.get("showSvg", "")
+                print(f"  {i}. {name} (id: {id_})", file=sys.stderr)
+                if show_svg:
+                    print(f"     SVG: {show_svg[:80]}...", file=sys.stderr)
+            return result
+        except Exception as e:
+            print(f"\n  搜索失败: {e}", file=sys.stderr)
+            return {"error": str(e)}
+        finally:
+            await self._cleanup()
+
     async def _cleanup(self) -> None:
-        """Clean up all resources."""
+        """清理所有资源。"""
         await self.searcher.close()
         if self.web_server.is_running():
             await self.web_server.stop()
 
     async def run(self) -> None:
-        """Run the MCP server on stdio."""
+        """通过 stdio 运行 MCP 服务器。"""
         print(t("server.starting"), file=sys.stderr)
-        print(f"  MCP transport : stdio", file=sys.stderr)
-        print(f"  Web server port: {self.config.web_server_port}", file=sys.stderr)
-        print(f"  Language       : {self.config.language}", file=sys.stderr)
-        print(f"  Auto start web : {self.config.auto_start_web_server}", file=sys.stderr)
-        print(f"  Auto open browser: {self.config.web_server_auto_open}", file=sys.stderr)
+        print(f"  MCP 传输方式   : stdio", file=sys.stderr)
+        print(f"  Web 服务器端口 : {self.config.web_server_port}", file=sys.stderr)
+        print(f"  语言           : {self.config.language}", file=sys.stderr)
+        print(f"  自动启动 Web   : {self.config.auto_start_web_server}", file=sys.stderr)
+        print(f"  自动打开浏览器 : {self.config.web_server_auto_open}", file=sys.stderr)
 
-        # Auto-start web server if configured
+        # 如已配置则自动启动 Web 服务器
         if self.config.auto_start_web_server:
             await self.web_server.start(auto_open=self.config.web_server_auto_open)
             self.web_interface.port = self.web_server.port
-            print(f"  Web server URL : {self.web_server.get_url()}", file=sys.stderr)
+            print(f"  Web 服务器 URL : {self.web_server.get_url()}", file=sys.stderr)
 
         print(t("server.started"), file=sys.stderr)
 
-        # Register signal handlers on the running event loop.
-        # add_signal_handler is not implemented on Windows (ProactorEventLoop),
-        # so skip registration there and rely on KeyboardInterrupt handling.
+        # 在运行的事件循环上注册信号处理器。
+        # add_signal_handler 在 Windows (ProactorEventLoop) 上未实现，
+        # 因此跳过注册，依赖 KeyboardInterrupt 处理。
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
             try:
@@ -374,18 +400,17 @@ class MCPIconServer:
             await self._cleanup()
 
     async def _shutdown_and_exit(self) -> None:
-        """Clean up resources then terminate the process.
+        """清理资源后终止进程。
 
-        The MCP SDK's stdio_server reads stdin in a blocking thread that
-        cannot be interrupted by task cancellation or fd closing on macOS.
-        After cleaning up, we reset the signal handler to default and
-        re-raise SIGINT so the process is terminated normally by the OS.
-        This allows the parent process (e.g. uv) to reap the child
-        cleanly without ESRCH errors.
+        MCP SDK 的 stdio_server 在阻塞线程中读取 stdin，
+        在 macOS 上无法通过任务取消或 fd 关闭来中断。
+        清理完成后，将信号处理器重置为默认并重新触发 SIGINT，
+        使进程被操作系统正常终止。
+        这允许父进程（如 uv）干净地回收子进程，不会出现 ESRCH 错误。
         """
         print(t("server.shutdown"), file=sys.stderr)
         await self._cleanup()
-        # Reset to default handler and re-raise — the OS terminates
-        # the process, and the parent can waitpid() without ESRCH.
+        # 重置为默认处理器并重新触发 — 操作系统终止进程，
+        # 父进程可以 waitpid() 而不会出现 ESRCH。
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         os.kill(os.getpid(), signal.SIGINT)

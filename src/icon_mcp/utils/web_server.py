@@ -25,7 +25,7 @@ class WebServer:
     def __init__(
         self,
         cache: CacheManager,
-        port: int = 3000,
+        port: int = 31245,
         auto_open: bool = False,
     ):
         self.cache = cache

@@ -8,7 +8,7 @@ from ..lang import t, get_current_language
 class WebInterface:
     """Generates the HTML/JS for the icon selection web UI."""
 
-    def __init__(self, port: int = 3000):
+    def __init__(self, port: int = 31245):
         self.port = port
 
     def generate_html(self, search_id: str = "") -> str:

@@ -11,11 +11,11 @@ class ServerConfig:
     """Server configuration loaded from environment variables."""
 
     # Language
-    language: str = field(default_factory=lambda: os.environ.get("LANGUAGE", "en"))
+    language: str = field(default_factory=lambda: os.environ.get("LANGUAGE", "zh-CN"))
 
     # Web server
     web_server_port: int = field(
-        default_factory=lambda: int(os.environ.get("WEB_SERVER_PORT", "3000"))
+        default_factory=lambda: int(os.environ.get("WEB_SERVER_PORT", "31245"))
     )
     web_server_auto_open: bool = field(
         default_factory=lambda: os.environ.get("WEB_SERVER_AUTO_OPEN", "false").lower()
