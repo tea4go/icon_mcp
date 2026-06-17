@@ -75,6 +75,7 @@ class WebInterface:
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 8px;
+            overflow: visible;
         }}
         .icon-card {{
             background: white;
@@ -85,7 +86,7 @@ class WebInterface:
             transition: transform 0.2s, box-shadow 0.2s;
             cursor: pointer;
             aspect-ratio: 1;
-            overflow: hidden;
+            position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -120,18 +121,27 @@ class WebInterface:
             white-space: nowrap;
         }}
         .icon-card .btn {{
-            margin-top: 4px;
-            padding: 4px 8px;
+            margin-top: 0;
+            padding: 3px;
             border: none;
             border-radius: 4px;
-            font-size: 9px;
+            font-size: 14px;
             cursor: pointer;
             background: #667eea;
             color: white;
             transition: background 0.2s;
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
         }}
         .icon-card .btn:hover {{ background: #5a6fd6; }}
         .icon-card .btn.select-btn {{
+            position: absolute;
+            top: 4px;
+            right: 4px;
             background: #4caf50;
             color: white;
         }}
@@ -140,24 +150,25 @@ class WebInterface:
             color: white;
         }}
         .card-actions {{
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
             display: flex;
             gap: 2px;
-            margin-top: 4px;
-            justify-content: center;
         }}
         .card-actions .btn {{
             margin-top: 0;
-            padding: 4px;
-            font-size: 16px;
-            width: 24px;
-            height: 24px;
+            padding: 3px;
+            font-size: 14px;
+            width: 20px;
+            height: 20px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             line-height: 1;
         }}
-        .card-actions .save-dropdown {{ position: relative; display: inline-flex; width: 24px; height: 24px; overflow: visible; }}
-        .card-actions .save-dropdown .btn.save-btn {{ padding: 0; font-size: 16px; line-height: 1; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; overflow: visible; }}
+        .card-actions .save-dropdown {{ position: relative; display: inline-flex; width: 20px; height: 20px; overflow: visible; }}
+        .card-actions .save-dropdown .btn.save-btn {{ padding: 0; font-size: 14px; line-height: 1; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; overflow: visible; }}
         .icon-card .btn.copy-btn {{
             background: #f0f0f5;
             color: #555;
@@ -314,7 +325,7 @@ class WebInterface:
 <body>
     <div class="header">
         <h1>{title}</h1>
-        <p>{subtitle}</p>
+        <p><a href="https://www.iconfont.cn" target="_blank" style="color:inherit;opacity:0.85">{subtitle}</a></p>
         <div class="search-bar">
             <input type="text" id="filterInput" placeholder="{search_placeholder}"
                    oninput="filterIcons(this.value)">
@@ -467,17 +478,17 @@ function displayIcons(icons) {{
         card.innerHTML =
             '<div class="icon-preview">' + preview + '</div>' +
             '<div class="icon-name">' + (icon.name || 'icon-' + icon.id) + '</div>' +
-            '<div class="card-actions">' +
             '<button class="btn select-btn ' + (isSelected ? 'selected-btn' : '') + '"' +
             ' title="{select_btn}">' +
             (isSelected ? '\u2714' : '') + '</button>' +
+            '<div class="card-actions">' +
             '<button class="btn copy-btn" data-id="' + icon.id + '"' +
             (hasSvg ? '' : ' disabled') + ' title="{copy_btn}">' +
-            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>' +
+            '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>' +
             '<div class="save-dropdown">' +
             '<button class="btn save-btn"' + (hasSvg ? '' : ' disabled') +
             ' title="{save_btn}">' +
-            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>' +
+            '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>' +
             '<div class="save-menu">' +
             '<button data-fmt="png">PNG</button>' +
             '<button data-fmt="bmp">BMP</button>' +
