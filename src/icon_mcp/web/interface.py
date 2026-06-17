@@ -73,7 +73,7 @@ class WebInterface:
         }}
         .icon-grid {{
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 8px;
         }}
         .icon-card {{
@@ -84,6 +84,12 @@ class WebInterface:
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
             transition: transform 0.2s, box-shadow 0.2s;
             cursor: pointer;
+            aspect-ratio: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }}
         .icon-card:hover {{
             transform: translateY(-3px);
@@ -94,12 +100,13 @@ class WebInterface:
             background: #f0f0ff;
         }}
         .icon-preview {{
-            width: 64px;
-            height: 64px;
+            width: 56px;
+            height: 56px;
             margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }}
         .icon-preview img, .icon-preview svg {{
             width: 100% !important;
@@ -124,25 +131,33 @@ class WebInterface:
             transition: background 0.2s;
         }}
         .icon-card .btn:hover {{ background: #5a6fd6; }}
+        .icon-card .btn.select-btn {{
+            background: #4caf50;
+            color: white;
+        }}
         .icon-card .btn.selected-btn {{
             background: #4caf50;
+            color: white;
         }}
         .card-actions {{
             display: flex;
-            flex-direction: column;
-            gap: 4px;
+            gap: 2px;
             margin-top: 4px;
+            justify-content: center;
         }}
-        .card-actions-row {{
-            display: flex;
-            gap: 4px;
-            width: 100%;
+        .card-actions .btn {{
+            margin-top: 0;
+            padding: 4px;
+            font-size: 16px;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
         }}
-        .card-actions-row .btn {{ margin-top: 0; padding: 4px 0; font-size: 12px; min-width: 0; }}
-        .card-actions-row .btn.select-btn {{ flex: 1; }}
-        .card-actions-row .btn.copy-btn {{ flex: 1; }}
-        .card-actions-row .save-dropdown {{ flex: 1; position: relative; }}
-        .card-actions-row .save-dropdown .btn.save-btn {{ width: 100%; }}
+        .card-actions .save-dropdown {{ position: relative; display: inline-flex; width: 24px; height: 24px; overflow: visible; }}
+        .card-actions .save-dropdown .btn.save-btn {{ padding: 0; font-size: 16px; line-height: 1; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; overflow: visible; }}
         .icon-card .btn.copy-btn {{
             background: #f0f0f5;
             color: #555;
@@ -166,15 +181,15 @@ class WebInterface:
             display: none;
             position: absolute;
             top: 100%;
-            left: 0;
+            right: 0;
             margin-top: 4px;
             background: white;
             border: 1px solid #ddd;
             border-radius: 6px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-            z-index: 10;
+            z-index: 100;
             overflow: hidden;
-            min-width: 110px;
+            min-width: 90px;
         }}
         .save-dropdown.open .save-menu {{ display: block; }}
         .save-menu button {{
@@ -453,22 +468,21 @@ function displayIcons(icons) {{
             '<div class="icon-preview">' + preview + '</div>' +
             '<div class="icon-name">' + (icon.name || 'icon-' + icon.id) + '</div>' +
             '<div class="card-actions">' +
-            '<div class="card-actions-row">' +
-            '<button class="btn select-btn ' + (isSelected ? 'selected-btn' : '') + '">' +
-            (isSelected ? '{selected_btn}' : '{select_btn}') + '</button>' +
+            '<button class="btn select-btn ' + (isSelected ? 'selected-btn' : '') + '"' +
+            ' title="{select_btn}">' +
+            (isSelected ? '\u2714' : '') + '</button>' +
             '<button class="btn copy-btn" data-id="' + icon.id + '"' +
-            (hasSvg ? '' : ' disabled') + '>{copy_btn}</button>' +
-            '</div>' +
-            '<div class="card-actions-row">' +
+            (hasSvg ? '' : ' disabled') + ' title="{copy_btn}">' +
+            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>' +
             '<div class="save-dropdown">' +
             '<button class="btn save-btn"' + (hasSvg ? '' : ' disabled') +
-            '>{save_btn} \\u25BE</button>' +
+            ' title="{save_btn}">' +
+            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>' +
             '<div class="save-menu">' +
             '<button data-fmt="png">PNG</button>' +
             '<button data-fmt="bmp">BMP</button>' +
             '<button data-fmt="ico">ICO</button>' +
             '</div></div>' +
-            '</div>' +
             '</div>';
         // 复制按钮：阻止冒泡（避免触发卡片选择），复制 AddPng 可用的 PNG Base64
         const copyEl = card.querySelector('.copy-btn');
