@@ -190,19 +190,16 @@ class WebInterface:
         }}
         .save-menu {{
             display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 4px;
+            position: fixed;
             background: white;
             border: 1px solid #ddd;
             border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
             overflow: hidden;
             min-width: 90px;
         }}
-        .save-dropdown.open .save-menu {{ display: block; }}
+        .save-menu.open {{ display: block; }}
         .save-menu button {{
             display: block;
             width: 100%;
@@ -360,6 +357,12 @@ class WebInterface:
         const WS_PORT = {self.port};
     </script>
     <script src="/site.js"></script>
+    <!-- 全局保存菜单，避免被卡片遮挡 -->
+    <div id="globalSaveMenu" class="save-menu">
+        <button data-fmt="png">PNG</button>
+        <button data-fmt="bmp">BMP</button>
+        <button data-fmt="ico">ICO</button>
+    </div>
 </body>
 </html>"""
 
@@ -489,11 +492,7 @@ function displayIcons(icons) {{
             '<button class="btn save-btn"' + (hasSvg ? '' : ' disabled') +
             ' title="{save_btn}">' +
             '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>' +
-            '<div class="save-menu">' +
-            '<button data-fmt="png">PNG</button>' +
-            '<button data-fmt="bmp">BMP</button>' +
-            '<button data-fmt="ico">ICO</button>' +
-            '</div></div>' +
+            '</div>' +
             '</div>';
         // 复制按钮：阻止冒泡（避免触发卡片选择），复制 AddPng 可用的 PNG Base64
         const copyEl = card.querySelector('.copy-btn');
@@ -509,18 +508,25 @@ function displayIcons(icons) {{
             const saveBtn = dropdown.querySelector('.save-btn');
             saveBtn.onclick = function(e) {{
                 e.stopPropagation();
-                closeAllSaveMenus(dropdown);
-                dropdown.classList.toggle('open');
-                // 打开时提升卡片层级，防止被邻近卡片遮挡
-                card.style.zIndex = dropdown.classList.contains('open') ? '50' : '';
+                const globalMenu = document.getElementById('globalSaveMenu');
+                const isOpen = globalMenu.classList.contains('open') && globalMenu._triggerBtn === saveBtn;
+                closeAllSaveMenus();
+                if (!isOpen) {{
+                    // 计算按钮位置，菜单向上弹出
+                    const btnRect = saveBtn.getBoundingClientRect();
+                    globalMenu.style.visibility = 'hidden';
+                    globalMenu.style.display = 'block';
+                    const menuW = globalMenu.offsetWidth || 90;
+                    const menuH = globalMenu.offsetHeight || 100;
+                    globalMenu.style.display = '';
+                    globalMenu.style.visibility = '';
+                    globalMenu.style.left = (btnRect.right - menuW) + 'px';
+                    globalMenu.style.top = (btnRect.top - menuH - 4) + 'px';
+                    globalMenu._currentIcon = icon;
+                    globalMenu._triggerBtn = saveBtn;
+                    globalMenu.classList.add('open');
+                }}
             }};
-            dropdown.querySelectorAll('.save-menu button').forEach(function(item) {{
-                item.onclick = function(e) {{
-                    e.stopPropagation();
-                    dropdown.classList.remove('open');
-                    saveIcon(icon, item.getAttribute('data-fmt'));
-                }};
-            }});
         }}
         grid.appendChild(card);
     }});
@@ -561,19 +567,28 @@ function formatAddPng(b64) {{
 }}
 
 // 关闭除 except 外的所有已打开保存菜单，并重置卡片层级
-function closeAllSaveMenus(except) {{
-    document.querySelectorAll('.save-dropdown.open').forEach(function(d) {{
-        if (d !== except) {{
-            d.classList.remove('open');
-            // 重置所在卡片的 z-index
-            const c = d.closest('.icon-card');
-            if (c) c.style.zIndex = '';
-        }}
-    }});
+function closeAllSaveMenus() {{
+    const globalMenu = document.getElementById('globalSaveMenu');
+    if (globalMenu) globalMenu.classList.remove('open');
 }}
 
+// 初始化全局菜单按钮事件
+function initGlobalSaveMenu() {{
+    const globalMenu = document.getElementById('globalSaveMenu');
+    if (!globalMenu) return;
+    globalMenu.querySelectorAll('button[data-fmt]').forEach(function(item) {{
+        item.onclick = function(e) {{
+            e.stopPropagation();
+            const icon = globalMenu._currentIcon;
+            globalMenu.classList.remove('open');
+            if (icon) saveIcon(icon, item.getAttribute('data-fmt'));
+        }};
+    }});
+}}
+document.addEventListener('DOMContentLoaded', initGlobalSaveMenu);
+
 // 点击页面任意其他位置关闭已打开的保存菜单
-document.addEventListener('click', function() {{ closeAllSaveMenus(null); }});
+document.addEventListener('click', function() {{ closeAllSaveMenus(); }});
 
 // 请求后端把 SVG 栅格化为指定格式并触发浏览器下载
 async function saveIcon(icon, fmt) {{
