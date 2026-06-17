@@ -57,6 +57,7 @@ class WebServer:
                 "message": t("server.webServerAlreadyRunning", {"port": self.port}),
                 "port": self.port,
                 "url": self.get_url(),
+                "websocket": True,
             }
 
         if port is not None:
