@@ -511,6 +511,8 @@ function displayIcons(icons) {{
                 e.stopPropagation();
                 closeAllSaveMenus(dropdown);
                 dropdown.classList.toggle('open');
+                // 打开时提升卡片层级，防止被邻近卡片遮挡
+                card.style.zIndex = dropdown.classList.contains('open') ? '50' : '';
             }};
             dropdown.querySelectorAll('.save-menu button').forEach(function(item) {{
                 item.onclick = function(e) {{
@@ -558,10 +560,15 @@ function formatAddPng(b64) {{
     return lines.join('\\n');
 }}
 
-// 关闭除 except 外的所有已打开保存菜单
+// 关闭除 except 外的所有已打开保存菜单，并重置卡片层级
 function closeAllSaveMenus(except) {{
     document.querySelectorAll('.save-dropdown.open').forEach(function(d) {{
-        if (d !== except) d.classList.remove('open');
+        if (d !== except) {{
+            d.classList.remove('open');
+            // 重置所在卡片的 z-index
+            const c = d.closest('.icon-card');
+            if (c) c.style.zIndex = '';
+        }}
     }});
 }}
 
