@@ -2,7 +2,6 @@
 
 import argparse
 import asyncio
-import json
 import os
 import sys
 
@@ -18,7 +17,7 @@ def main() -> None:
     parser.add_argument("--auto-open", action="store_true", default=None, help="Auto-open browser")
     parser.add_argument("--auto-start-web", action="store_true", default=None, help="Auto-start web server")
     parser.add_argument("--language", choices=["en", "zh-CN"], default=None, help="界面语言")
-    parser.add_argument("--test", type=str, default=None, help="测试模式：直接搜索指定关键词并输出结果，然后退出")
+    parser.add_argument("--test", type=str, default=None, help="测试模式：启动服务器后自动搜索指定关键词并打开 Web 页面")
 
     args = parser.parse_args()
 
@@ -33,18 +32,12 @@ def main() -> None:
         config.language = args.language
         os.environ["LANGUAGE"] = args.language
 
-    server = MCPIconServer(config)
-
-    # 测试模式
+    # 测试模式：设置自动搜索关键词
     if args.test is not None:
-        try:
-            result = asyncio.run(server.test_search(args.test))
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-        except Exception as e:
-            print(f"测试失败: {e}", file=sys.stderr)
-            sys.exit(1)
-        return
+        config.test_query = args.test
+        config.auto_start_web_server = True
 
+    server = MCPIconServer(config)
     try:
         asyncio.run(server.run())
     except (KeyboardInterrupt, SystemExit):

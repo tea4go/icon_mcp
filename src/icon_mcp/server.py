@@ -326,31 +326,34 @@ class MCPIconServer:
             "message": t("selection.selectionTimeout", {"seconds": elapsed}),
         }
 
-    async def test_search(self, query: str, page_size: int = 20) -> dict[str, Any]:
-        """直接搜索图标并输出结果，用于 --test 参数快速验证。"""
-        print(t("server.starting"), file=sys.stderr)
-        print(f"  测试搜索关键词: {query}", file=sys.stderr)
-        print(f"  每页结果数     : {page_size}", file=sys.stderr)
+    async def _auto_test_search(self, query: str) -> None:
+        """自动执行搜索并打开 Web 页面，用于 --test 参数测试。"""
+        print(f"\n  [测试模式] 自动搜索: {query}", file=sys.stderr)
 
         try:
-            result = await self.searcher.search_icons(q=query, page_size=page_size)
-            # 输出搜索结果摘要
+            # 确保 Web 服务器已启动
+            if not self.web_server.is_running():
+                await self.web_server.start(auto_open=False)
+                self.web_interface.port = self.web_server.port
+                print(f"  Web 服务器已启动: {self.web_server.get_url()}", file=sys.stderr)
+
+            # 执行搜索
+            result = await self.searcher.search_icons(q=query, page_size=20)
+            search_id = result["search_id"]
+            web_url = f"{self.web_server.get_url()}?searchId={search_id}"
+
+            # 输出搜索摘要
             icons = result.get("icons", [])
             total = result.get("total_count", 0)
-            print(f"\n  搜索 '{query}' 完成: 本页 {len(icons)} 个图标，总计 {total} 个", file=sys.stderr)
-            for i, icon in enumerate(icons, 1):
-                name = icon.get("name", "未知")
-                id_ = icon.get("id", "")
-                show_svg = icon.get("showSvg", "")
-                print(f"  {i}. {name} (id: {id_})", file=sys.stderr)
-                if show_svg:
-                    print(f"     SVG: {show_svg[:80]}...", file=sys.stderr)
-            return result
+            print(f"  搜索完成: 本页 {len(icons)} 个图标，总计 {total} 个", file=sys.stderr)
+            print(f"  搜索 ID: {search_id}", file=sys.stderr)
+            print(f"\n  >>> 浏览器访问: {web_url}", file=sys.stderr)
+
+            # 自动打开浏览器
+            self.web_server._open_browser(web_url)
+
         except Exception as e:
-            print(f"\n  搜索失败: {e}", file=sys.stderr)
-            return {"error": str(e)}
-        finally:
-            await self._cleanup()
+            print(f"  自动搜索失败: {e}", file=sys.stderr)
 
     async def _cleanup(self) -> None:
         """清理所有资源。"""
@@ -374,6 +377,10 @@ class MCPIconServer:
             print(f"  Web 服务器 URL : {self.web_server.get_url()}", file=sys.stderr)
 
         print(t("server.started"), file=sys.stderr)
+
+        # 测试模式：自动搜索并打开 Web 页面
+        if self.config.test_query:
+            asyncio.ensure_future(self._auto_test_search(self.config.test_query))
 
         # 在运行的事件循环上注册信号处理器。
         # add_signal_handler 在 Windows (ProactorEventLoop) 上未实现，

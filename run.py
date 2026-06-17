@@ -4,13 +4,13 @@
     uv run python run.py
     uv run python run.py --port 8080 --language zh-CN
     uv run python run.py --test macos --language zh-CN
+    uv run python run.py --test home --auto-open --language zh-CN
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import json
 import os
 import sys
 
@@ -54,12 +54,12 @@ def main() -> None:
         "--test",
         type=str,
         default=None,
-        help="测试模式：直接搜索指定关键词并输出结果，然后退出",
+        help="测试模式：启动服务器后自动搜索指定关键词并打开 Web 页面",
     )
 
     args = parser.parse_args()
 
-    # Build config (CLI args override env vars)
+    # 构建配置（CLI 参数覆盖环境变量）
     config = ServerConfig()
     if args.port is not None:
         config.web_server_port = args.port
@@ -71,19 +71,13 @@ def main() -> None:
         config.language = args.language
         os.environ["LANGUAGE"] = args.language
 
-    # 创建服务器
-    server = MCPIconServer(config)
-
-    # 测试模式：直接搜索并输出结果
+    # 测试模式：设置自动搜索关键词，启动后自动执行搜索并打开 Web 页面
     if args.test is not None:
-        try:
-            result = asyncio.run(server.test_search(args.test))
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-        except Exception as e:
-            print(f"测试失败: {e}", file=sys.stderr)
-            sys.exit(1)
-        return
+        config.test_query = args.test
+        config.auto_start_web_server = True
 
+    # 创建并运行服务器
+    server = MCPIconServer(config)
     try:
         asyncio.run(server.run())
     except (KeyboardInterrupt, SystemExit):
