@@ -142,8 +142,10 @@ class WebInterface:
             position: absolute;
             top: 4px;
             left: 4px;
-            background: #4caf50;
-            color: white;
+            background: transparent;
+            color: transparent;
+            border: none;
+            box-shadow: none;
         }}
         .icon-card .btn.selected-btn {{
             background: #4caf50;
@@ -197,13 +199,13 @@ class WebInterface:
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             z-index: 9999;
             overflow: hidden;
-            min-width: 90px;
+            min-width: 110px;
         }}
         .save-menu.open {{ display: block; }}
         .save-menu button {{
             display: block;
             width: 100%;
-            padding: 8px 14px;
+            padding: 6px 14px;
             border: none;
             background: white;
             color: #555;
@@ -581,7 +583,13 @@ function initGlobalSaveMenu() {{
             e.stopPropagation();
             const icon = globalMenu._currentIcon;
             globalMenu.classList.remove('open');
-            if (icon) saveIcon(icon, item.getAttribute('data-fmt'));
+            if (icon) {{
+                const fmt = item.getAttribute('data-fmt');
+                // 同时保存16/32/48三个尺寸
+                [16, 24, 32, 48].forEach(function(size) {{
+                    saveIcon(icon, fmt, size);
+                }});
+            }}
         }};
     }});
 }}
@@ -591,14 +599,15 @@ document.addEventListener('DOMContentLoaded', initGlobalSaveMenu);
 document.addEventListener('click', function() {{ closeAllSaveMenus(); }});
 
 // 请求后端把 SVG 栅格化为指定格式并触发浏览器下载
-async function saveIcon(icon, fmt) {{
+async function saveIcon(icon, fmt, size) {{
+    size = size || 32;
     const svg = icon.show_svg;
     if (!svg) return;
     try {{
         const resp = await fetch('/api/raster', {{
             method: 'POST',
             headers: {{ 'Content-Type': 'application/json' }},
-            body: JSON.stringify({{ svg: svg, format: fmt, size: 128 }})
+            body: JSON.stringify({{ svg: svg, format: fmt, size: size }})
         }});
         if (!resp.ok) {{
             let msg = 'rasterize failed';
@@ -609,7 +618,7 @@ async function saveIcon(icon, fmt) {{
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = (icon.name || 'icon-' + icon.id) + '.' + fmt;
+        a.download = (icon.name || 'icon-' + icon.id) + '.' + size + '.' + fmt;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
