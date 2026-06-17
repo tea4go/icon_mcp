@@ -94,16 +94,16 @@ class WebInterface:
             background: #f0f0ff;
         }}
         .icon-preview {{
-            width: 48px;
-            height: 48px;
+            width: 64px;
+            height: 64px;
             margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: center;
         }}
         .icon-preview img, .icon-preview svg {{
-            width: 2em;
-            height: 2em;
+            width: 100% !important;
+            height: 100% !important;
         }}
         .icon-name {{
             font-size: 11px;
@@ -117,7 +117,7 @@ class WebInterface:
             padding: 4px 8px;
             border: none;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 9px;
             cursor: pointer;
             background: #667eea;
             color: white;
