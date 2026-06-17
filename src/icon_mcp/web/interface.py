@@ -141,7 +141,7 @@ class WebInterface:
         .icon-card .btn.select-btn {{
             position: absolute;
             top: 4px;
-            right: 4px;
+            left: 4px;
             background: #4caf50;
             color: white;
         }}
