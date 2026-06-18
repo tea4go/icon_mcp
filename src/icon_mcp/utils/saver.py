@@ -102,6 +102,11 @@ class IconSaver:
             img = img.convert("RGBA")
         img = img.resize((size, size), Image.LANCZOS)
 
+        if fmt in ("png", "ico"):
+            # 渲染器填了不透明白底，抠掉与边界连通的白色（保留内部白）
+            from .raster import make_edge_transparent
+            img = make_edge_transparent(img)
+
         if fmt == "png":
             img.save(file_path, "PNG")
         elif fmt == "ico":

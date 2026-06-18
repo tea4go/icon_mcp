@@ -274,6 +274,8 @@ class WebServer:
         if img.mode != "RGBA":
             img = img.convert("RGBA")
         img = img.resize((size, size), Image.LANCZOS)
+        from .raster import make_edge_transparent
+        img = make_edge_transparent(img)
 
         buf = io.BytesIO()
         img.save(buf, "PNG")
@@ -347,6 +349,10 @@ class WebServer:
         if img.mode != "RGBA":
             img = img.convert("RGBA")
         img = img.resize((size, size), Image.LANCZOS)
+
+        if fmt in ("png", "ico"):
+            from .raster import make_edge_transparent
+            img = make_edge_transparent(img)
 
         buf = io.BytesIO()
         if fmt == "png":
