@@ -585,8 +585,9 @@ function initGlobalSaveMenu() {{
             globalMenu.classList.remove('open');
             if (icon) {{
                 const fmt = item.getAttribute('data-fmt');
-                // 同时保存16/32/48三个尺寸
-                [16, 24, 32, 48].forEach(function(size) {{
+                // 同时保存多个尺寸；ICO 最大支持到 256，跳过 512
+                [16, 24, 32, 48, 256, 512].forEach(function(size) {{
+                    if (fmt === 'ico' && size > 256) return;
                     saveIcon(icon, fmt, size);
                 }});
             }}

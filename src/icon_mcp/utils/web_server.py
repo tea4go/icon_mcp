@@ -262,20 +262,9 @@ class WebServer:
         import base64
         import io
 
-        from PIL import Image
-        from reportlab.graphics import renderPM
-        from svglib.svglib import svg2rlg
+        from .raster import render_svg
 
-        drawing = svg2rlg(io.StringIO(svg_content))
-        if drawing is None:
-            raise ValueError("Failed to parse SVG content")
-
-        img = renderPM.drawToPIL(drawing)
-        if img.mode != "RGBA":
-            img = img.convert("RGBA")
-        img = img.resize((size, size), Image.LANCZOS)
-        from .raster import make_edge_transparent
-        img = make_edge_transparent(img)
+        img = render_svg(svg_content, size, edge_transparent=True)
 
         buf = io.BytesIO()
         img.save(buf, "PNG")
@@ -338,21 +327,10 @@ class WebServer:
         import io
 
         from PIL import Image
-        from reportlab.graphics import renderPM
-        from svglib.svglib import svg2rlg
 
-        drawing = svg2rlg(io.StringIO(svg_content))
-        if drawing is None:
-            raise ValueError("Failed to parse SVG content")
+        from .raster import render_svg
 
-        img = renderPM.drawToPIL(drawing)
-        if img.mode != "RGBA":
-            img = img.convert("RGBA")
-        img = img.resize((size, size), Image.LANCZOS)
-
-        if fmt in ("png", "ico"):
-            from .raster import make_edge_transparent
-            img = make_edge_transparent(img)
+        img = render_svg(svg_content, size, edge_transparent=fmt in ("png", "ico"))
 
         buf = io.BytesIO()
         if fmt == "png":

@@ -86,26 +86,11 @@ class IconSaver:
     @staticmethod
     def _save_raster(svg_content: str, file_path: str, fmt: str, size: int) -> None:
         """Rasterize SVG markup and write it as png/bmp/ico."""
-        # Heavy deps imported lazily so svg-only usage stays light.
-        import io
-
         from PIL import Image
-        from reportlab.graphics import renderPM
-        from svglib.svglib import svg2rlg
 
-        drawing = svg2rlg(io.StringIO(svg_content))
-        if drawing is None:
-            raise ValueError("Failed to parse SVG content")
+        from .raster import render_svg
 
-        img = renderPM.drawToPIL(drawing)
-        if img.mode != "RGBA":
-            img = img.convert("RGBA")
-        img = img.resize((size, size), Image.LANCZOS)
-
-        if fmt in ("png", "ico"):
-            # 渲染器填了不透明白底，抠掉与边界连通的白色（保留内部白）
-            from .raster import make_edge_transparent
-            img = make_edge_transparent(img)
+        img = render_svg(svg_content, size, edge_transparent=fmt in ("png", "ico"))
 
         if fmt == "png":
             img.save(file_path, "PNG")
