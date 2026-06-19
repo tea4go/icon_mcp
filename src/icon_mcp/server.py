@@ -219,11 +219,29 @@ class MCPIconServer:
                 self.web_interface.port = self.web_server.port
                 print(f"  Web 服务器已自动启动: {self.web_server.get_url()}", file=sys.stderr)
 
-            # 在结果中添加 Web URL
             search_id = result["search_id"]
-            result["web_url"] = f"{self.web_server.get_url()}?searchId={search_id}"
-            result["waiting_message"] = t("search.pleaseWaitForSelection")
-            return result
+            web_url = f"{self.web_server.get_url()}?searchId={search_id}"
+
+            # 面向 LLM 的精简返回：URL 与下一步指引放在最前，icons 只保留
+            # 名称，避免完整 SVG 把 URL 淹没导致 LLM 看不到地址。
+            # （Web 界面走 /api/cache 读的是另一份完整缓存，不受影响。）
+            return {
+                "message": (
+                    f"已搜索到 {result['count']} 个图标。"
+                    f"请让用户在浏览器打开下面的地址挑选图标：\n{web_url}\n"
+                    f"用户选好后，调用 check_selection_status 工具"
+                    f"（searchId={search_id}）轮询，即可自动拿到选中结果。"
+                ),
+                "web_url": web_url,
+                "search_id": search_id,
+                "count": result["count"],
+                "total_count": result.get("total_count"),
+                "page": result.get("page"),
+                "icons": [
+                    ic.get("name", f"icon-{ic.get('id')}")
+                    for ic in result.get("icons", [])
+                ],
+            }
 
         elif name == "start_web_server":
             result = await self.web_server.start(
