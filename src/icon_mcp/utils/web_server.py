@@ -36,10 +36,15 @@ class WebServer:
         self._site: web.TCPSite | None = None
         self._ws_clients: set[web.WebSocketResponse] = set()
         self._html_generator: Any = None  # Will be set externally
+        self._searcher: Any = None  # Will be set externally
 
     def set_html_generator(self, generator: Any) -> None:
         """Set the HTML generator for serving the web UI."""
         self._html_generator = generator
+
+    def set_searcher(self, searcher: Any) -> None:
+        """Set the icon searcher used by the web UI re-search feature."""
+        self._searcher = searcher
 
     def is_running(self) -> bool:
         return self._site is not None
@@ -166,16 +171,75 @@ class WebServer:
         )
 
     async def _handle_search_api(self, request: web.Request) -> web.Response:
-        """Handle search API - proxy to icon search."""
+        """Handle search API - re-search iconfont.cn from the web UI.
+
+        Fetches fresh results for the given query and overwrites the cache
+        under the *existing* searchId, so the MCP client's
+        check_selection_status polling and the live WebSocket keep working.
+        """
         try:
             body = await request.json()
         except Exception:
-            return web.json_response({"error": "Invalid JSON"}, status=400)
+            return web.json_response(
+                {"error": "Invalid JSON"},
+                status=400,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
 
-        # This endpoint is reserved for future use (direct search from web UI)
+        q = str(body.get("q", "")).strip()
+        search_id = str(body.get("searchId", "")).strip()
+        sort_type = str(body.get("sortType", "recommend"))
+        page_size = int(body.get("pageSize", 100))
+
+        if not q:
+            return web.json_response(
+                {"error": "Missing q"},
+                status=400,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+        if not search_id:
+            return web.json_response(
+                {"error": "Missing searchId"},
+                status=400,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+        if self._searcher is None:
+            return web.json_response(
+                {"error": "Searcher not configured"},
+                status=500,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+
+        try:
+            result = await self._searcher.search_icons(
+                q=q, sort_type=sort_type, page=1, page_size=page_size
+            )
+        except Exception as e:
+            return web.json_response(
+                {"error": f"{e}"},
+                status=502,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+
+        icons = result.get("icons", [])
+        total_count = result.get("total_count", len(icons))
+
+        # Overwrite the existing searchId's cache so pagination / selection /
+        # check_selection_status all operate on the new results.
+        self.cache.set_search(
+            search_id,
+            {
+                "query": q,
+                "page": 1,
+                "page_size": page_size,
+                "icons": icons,
+                "total_count": total_count,
+                "timestamp": time.time(),
+            },
+        )
+
         return web.json_response(
-            {"error": "Use MCP tools for searching"},
-            status=501,
+            {"success": True, "count": len(icons), "totalCount": total_count, "query": q},
             headers={"Access-Control-Allow-Origin": "*"},
         )
 

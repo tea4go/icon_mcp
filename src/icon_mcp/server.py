@@ -48,6 +48,7 @@ class MCPIconServer:
         )
         self.web_interface = WebInterface(port=self.config.web_server_port)
         self.web_server.set_html_generator(self.web_interface)
+        self.web_server.set_searcher(self.searcher)
 
         # MCP 服务器实例
         self.mcp = Server("icon-mcp-server")

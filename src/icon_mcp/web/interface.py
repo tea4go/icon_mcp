@@ -17,6 +17,7 @@ class WebInterface:
         title = t("web.title")
         subtitle = t("web.subtitle")
         search_placeholder = t("web.searchPlaceholder")
+        search_btn = t("web.searchButton")
         send_btn = t("web.sendSelected")
         no_selected = t("web.noIconsSelected")
         loading = t("web.loading")
@@ -59,6 +60,20 @@ class WebInterface:
             font-size: 15px;
             outline: none;
         }}
+        .search-bar .search-btn {{
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.9);
+            color: #5a4a8a;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }}
+        .search-bar .search-btn:hover {{ background: #fff; }}
+        .search-bar .search-btn:disabled {{ opacity: 0.6; cursor: not-allowed; }}
         .main {{
             width: 90%;
             margin: 0 auto;
@@ -327,7 +342,9 @@ class WebInterface:
         <p><a href="https://www.iconfont.cn" target="_blank" style="color:inherit;opacity:0.85">{subtitle}</a></p>
         <div class="search-bar">
             <input type="text" id="filterInput" placeholder="{search_placeholder}"
-                   oninput="filterIcons(this.value)">
+                   oninput="filterIcons(this.value)"
+                   onkeydown="if(event.key==='Enter'){{remoteSearch();}}">
+            <button id="searchBtn" class="search-btn" onclick="remoteSearch()">{search_btn}</button>
         </div>
     </div>
     <div class="main">
@@ -691,6 +708,42 @@ function filterIcons(query) {{
         }});
     }}
     displayIcons(currentIcons);
+}}
+
+// 从 iconfont.cn 重新搜索：把新结果覆盖到同一 searchId，再重载第一页。
+// 复用原 searchId，使 MCP 端的 check_selection_status 轮询和 WebSocket 不受影响。
+async function remoteSearch() {{
+    const input = document.getElementById('filterInput');
+    const q = (input.value || '').trim();
+    if (!q) return;
+    if (!SEARCH_ID) {{
+        showMessage('{error_text}: searchId', 'error');
+        return;
+    }}
+    const btn = document.getElementById('searchBtn');
+    const loading = document.getElementById('loading');
+    const grid = document.getElementById('iconGrid');
+    btn.disabled = true;
+    loading.style.display = 'block';
+    grid.innerHTML = '';
+    try {{
+        const resp = await fetch('/api/search', {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify({{ q: q, searchId: SEARCH_ID }})
+        }});
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {{
+            throw new Error(data.error || 'search failed');
+        }}
+        pageSize = calcPageSize();
+        await loadCachedResults(1);  // loadCachedResults 负责关闭 loading
+    }} catch(e) {{
+        showMessage('{error_text}: ' + e.message, 'error');
+        loading.style.display = 'none';
+    }} finally {{
+        btn.disabled = false;
+    }}
 }}
 
 function updatePagination() {{

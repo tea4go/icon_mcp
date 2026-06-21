@@ -49,7 +49,8 @@ TRANSLATIONS = {
     "web": {
         "title": "MCP 图标搜索",
         "subtitle": "从 iconfont.cn 搜索和选择图标",
-        "searchPlaceholder": "搜索图标...",
+        "searchPlaceholder": "输入关键词，回车或点「搜索」从 iconfont.cn 搜索",
+        "searchButton": "搜索",
         "selectButton": "选择",
         "selectedButton": "已选择",
         "copyButton": "复制",

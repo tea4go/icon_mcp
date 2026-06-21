@@ -49,7 +49,8 @@ TRANSLATIONS = {
     "web": {
         "title": "MCP Icon Search",
         "subtitle": "Search and select icons from iconfont.cn",
-        "searchPlaceholder": "Search icons...",
+        "searchPlaceholder": "Type a keyword, press Enter to search iconfont.cn",
+        "searchButton": "Search",
         "selectButton": "Select",
         "selectedButton": "Selected",
         "copyButton": "Copy",
